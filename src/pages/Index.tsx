@@ -1,15 +1,16 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Moon, Sun, Trash2, ChevronDown, Target, Send } from 'lucide-react';
+import { Mic, Moon, Sun, Trash2, Send } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ChatMessage from '../components/ChatMessage';
-import CareerGuidance from '../components/CareerGuidance';
 import SmartSuggestions from '../components/SmartSuggestions';
+import CollapsibleSidebar from '../components/CollapsibleSidebar';
+import FollowUpQuestions from '../components/FollowUpQuestions';
+import ApiKeyInput from '../components/ApiKeyInput';
 import { useChat } from '../hooks/useChat';
 import { useSpeech } from '../hooks/useSpeech';
 
@@ -61,12 +62,12 @@ const STUDY_MODES = {
 const Index = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [studyMode, setStudyMode] = useState('general');
-  const [careerPanelOpen, setCareerPanelOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [showStarterPrompts, setShowStarterPrompts] = useState(true);
+  const [apiKey, setApiKey] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { messages, isLoading, sendMessage, clearChat } = useChat(STUDY_MODES[studyMode].systemPrompt);
+  const { messages, isLoading, sendMessage, clearChat } = useChat(STUDY_MODES[studyMode].systemPrompt, apiKey);
   const { startListening, stopListening, isListening, speak } = useSpeech();
 
   const scrollToBottom = () => {
@@ -103,6 +104,30 @@ const Index = () => {
   const handleModeChange = (mode: string) => {
     setStudyMode(mode);
     setShowStarterPrompts(messages.length === 0);
+  };
+
+  const handleOpenCareerGuidance = () => {
+    const careerWindow = window.open('/career-guidance', '_blank', 'width=1200,height=800');
+    
+    // Listen for messages from career guidance window
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'START_LEARNING') {
+        const { topic, role } = event.data.payload;
+        handleSendMessage(`I want to be a ${role}, for that I need to learn ${topic}. Please explain.`);
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    
+    // Clean up listener when window closes
+    if (careerWindow) {
+      const checkClosed = setInterval(() => {
+        if (careerWindow.closed) {
+          window.removeEventListener('message', handleMessage);
+          clearInterval(checkClosed);
+        }
+      }, 1000);
+    }
   };
 
   const getStarterPrompts = () => {
@@ -172,27 +197,16 @@ const Index = () => {
         </header>
 
         <div className="flex h-[calc(100vh-73px)]">
-          {/* Career Guidance Panel */}
-          <Collapsible
-            open={careerPanelOpen}
-            onOpenChange={setCareerPanelOpen}
-            className="border-r bg-white dark:bg-gray-800"
-          >
-            <CollapsibleTrigger className="flex items-center gap-2 p-4 w-full text-left hover:bg-gray-50 dark:hover:bg-gray-700">
-              <Target className="h-5 w-5 text-blue-600" />
-              <span className="font-medium">🎯 Career Path Guidance</span>
-              <ChevronDown className={`h-4 w-4 ml-auto transition-transform ${careerPanelOpen ? 'rotate-180' : ''}`} />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="w-80">
-              <CareerGuidance onStartLearning={(topic, role) => {
-                handleSendMessage(`I wanna be a ${role}, for that I need to learn ${topic}. Please explain.`);
-                setCareerPanelOpen(false);
-              }} />
-            </CollapsibleContent>
-          </Collapsible>
+          {/* Collapsible Sidebar */}
+          <CollapsibleSidebar onOpenCareerGuidance={handleOpenCareerGuidance} />
 
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col">
+            {/* API Key Input */}
+            <div className="p-4 border-b">
+              <ApiKeyInput onApiKeyChange={setApiKey} />
+            </div>
+
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {showStarterPrompts && messages.length === 0 && (
@@ -261,21 +275,28 @@ const Index = () => {
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder={STUDY_MODES[studyMode].placeholder}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    className="pr-12"
+                    className="pr-20"
                   />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 ${isListening ? 'text-red-500' : ''}`}
-                        onClick={handleVoiceInput}
-                      >
-                        <Mic className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Voice input</TooltipContent>
-                  </Tooltip>
+                  <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex gap-1">
+                    <FollowUpQuestions
+                      lastMessage={messages[messages.length - 1] || null}
+                      studyMode={studyMode}
+                      onQuestionClick={handleSendMessage}
+                    />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={`h-8 w-8 ${isListening ? 'text-red-500' : ''}`}
+                          onClick={handleVoiceInput}
+                        >
+                          <Mic className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Voice input</TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
                 <Button onClick={() => handleSendMessage()} disabled={!message.trim() || isLoading}>
                   <Send className="h-4 w-4" />

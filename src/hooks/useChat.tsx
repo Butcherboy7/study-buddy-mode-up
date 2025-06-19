@@ -1,42 +1,51 @@
-
 import { useState, useCallback } from 'react';
+import { useGemini } from './useGemini';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
 
-export const useChat = (systemPrompt: string) => {
+export const useChat = (systemPrompt: string, apiKey?: string) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { sendMessage: sendGeminiMessage } = useGemini();
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
 
     const userMessage: Message = { role: 'user', content };
-    setMessages(prev => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setIsLoading(true);
 
     try {
-      // Mock API call - in real app, this would call Gemini API
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      let response: string;
       
-      // Generate a mock response based on the system prompt and user message
-      const mockResponse = generateMockResponse(content, systemPrompt);
-      const assistantMessage: Message = { role: 'assistant', content: mockResponse };
+      if (apiKey) {
+        // Use Gemini API
+        response = await sendGeminiMessage(newMessages, systemPrompt, apiKey);
+      } else {
+        // Fallback to mock response
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+        response = generateMockResponse(content, systemPrompt);
+      }
       
+      const assistantMessage: Message = { role: 'assistant', content: response };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = { 
         role: 'assistant', 
-        content: 'Sorry, I encountered an error. Please try again.' 
+        content: apiKey 
+          ? 'Sorry, I encountered an error with the Gemini API. Please check your API key and try again.' 
+          : 'Sorry, I encountered an error. Please try again or configure your Gemini API key for better responses.'
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  }, [systemPrompt]);
+  }, [messages, systemPrompt, apiKey, sendGeminiMessage]);
 
   const clearChat = useCallback(() => {
     setMessages([]);
@@ -50,7 +59,7 @@ export const useChat = (systemPrompt: string) => {
   };
 };
 
-// Mock response generator
+// Mock response generator (fallback)
 const generateMockResponse = (userMessage: string, systemPrompt: string): string => {
   const lowerMessage = userMessage.toLowerCase();
   
