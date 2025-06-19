@@ -19,17 +19,32 @@ export const useChat = (systemPrompt: string) => {
     setIsLoading(true);
 
     try {
-      // For now, use mock response - you can integrate with your backend LLM here
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-      const response = generateMockResponse(content, systemPrompt);
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content,
+          systemPrompt,
+          history: messages
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const assistantResponse = data.response || data.fallback || 'Sorry, I encountered an error. Please try again.';
       
-      const assistantMessage: Message = { role: 'assistant', content: response };
+      const assistantMessage: Message = { role: 'assistant', content: assistantResponse };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = { 
         role: 'assistant', 
-        content: 'Sorry, I encountered an error. Please try again.'
+        content: 'I\'m having trouble connecting right now. Please check your internet connection and try again.'
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
