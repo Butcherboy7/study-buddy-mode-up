@@ -98,6 +98,15 @@ EduBuddy is a modern AI-powered learning assistant application built with React 
 
 ## Changelog
 - June 19, 2025. Initial setup
+- June 19, 2025. Enhanced UI with left sidebar navigation and resizable code editor panels
+
+## Recent Changes
+✓ Fixed syntax errors in Index.tsx file causing app crashes
+✓ Redesigned layout with collapsible left sidebar for navigation
+✓ Added mouse-draggable resize functionality to code playground
+✓ Moved navigation buttons to sidebar to prevent scrolling issues
+✓ Improved user experience with persistent panel sizing
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+Layout preferences: Left sidebar navigation, resizable code editor panels

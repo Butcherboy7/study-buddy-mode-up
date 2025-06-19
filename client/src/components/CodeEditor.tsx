@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Save, RotateCcw, Bug, Sparkles, Copy, Download } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,12 +96,56 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ onAIHelp }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState('');
   const [aiQuestion, setAiQuestion] = useState('');
+  const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percentage
+  const [isResizing, setIsResizing] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setCode(LANGUAGES[language].template);
     setOutput('');
     setError('');
   }, [language]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isResizing || !containerRef.current) return;
+    
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+    
+    // Constrain between 20% and 80%
+    const constrainedWidth = Math.max(20, Math.min(80, newWidth));
+    setLeftPanelWidth(constrainedWidth);
+  }, [isResizing]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, handleMouseMove, handleMouseUp]);
 
   const runCode = async () => {
     setIsRunning(true);
@@ -256,55 +300,76 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ onAIHelp }) => {
         </div>
       </div>
 
-      {/* Code Editor and Output */}
-      <div className="flex-1 flex flex-col lg:flex-row">
-        {/* Code Editor */}
-        <div className="flex-1 flex flex-col">
-          <div className="bg-gray-100 dark:bg-gray-900 px-4 py-2 border-b">
-            <span className="text-sm font-medium">Editor</span>
+      {/* Code Editor and Output with Resizable Panels */}
+      <div className="flex-1" ref={containerRef}>
+        <div className="h-full flex">
+          {/* Code Editor */}
+          <div 
+            className="flex flex-col min-w-0 border-r"
+            style={{ width: `${leftPanelWidth}%` }}
+          >
+            <div className="bg-gray-100 dark:bg-gray-900 px-4 py-2 border-b flex items-center justify-between">
+              <span className="text-sm font-medium">Editor</span>
+              <div className="text-xs text-gray-500">
+                Drag border to resize →
+              </div>
+            </div>
+            <Textarea
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="flex-1 font-mono text-sm resize-none border-0 rounded-none focus:ring-0 min-h-0"
+              placeholder={`Write your ${LANGUAGES[language].name} code here...`}
+              style={{ minHeight: '400px' }}
+            />
           </div>
-          <Textarea
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            className="flex-1 font-mono text-sm resize-none border-0 rounded-none focus:ring-0"
-            placeholder={`Write your ${LANGUAGES[language].name} code here...`}
-          />
-        </div>
 
-        {/* Output Panel */}
-        <div className="flex-1 flex flex-col border-t lg:border-t-0 lg:border-l">
-          <div className="bg-gray-100 dark:bg-gray-900 px-4 py-2 border-b">
-            <span className="text-sm font-medium">Output</span>
+          {/* Resizable Handle */}
+          <div 
+            className={`w-1 bg-gray-200 dark:bg-gray-700 cursor-col-resize hover:bg-blue-400 transition-colors relative group ${isResizing ? 'bg-blue-400' : ''}`}
+            onMouseDown={handleMouseDown}
+          >
+            <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-blue-400/20"></div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-gray-400 dark:bg-gray-500 rounded-full opacity-60"></div>
           </div>
-          <div className="flex-1 p-4 bg-gray-50 dark:bg-gray-800 overflow-auto">
-            {language === 'html' && output === 'preview' ? (
-              <iframe
-                srcDoc={code}
-                className="w-full h-full border rounded"
-                title="HTML Preview"
-              />
-            ) : (
-              <>
-                {error && (
-                  <div className="bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded p-3 mb-4">
-                    <p className="text-red-700 dark:text-red-400 font-medium">Error:</p>
-                    <pre className="text-red-600 dark:text-red-300 text-sm mt-1 whitespace-pre-wrap">{error}</pre>
-                  </div>
-                )}
-                {output && output !== 'preview' && (
-                  <div className="bg-white dark:bg-gray-900 border rounded p-3">
-                    <p className="text-gray-700 dark:text-gray-300 font-medium mb-2">Output:</p>
-                    <pre className="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-wrap">{output}</pre>
-                  </div>
-                )}
-                {!output && !error && (
-                  <div className="text-gray-500 dark:text-gray-400 text-center py-8">
-                    <Play className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Click "Run" to execute your code</p>
-                  </div>
-                )}
-              </>
-            )}
+
+          {/* Output Panel */}
+          <div 
+            className="flex flex-col min-w-0"
+            style={{ width: `${100 - leftPanelWidth}%` }}
+          >
+            <div className="bg-gray-100 dark:bg-gray-900 px-4 py-2 border-b">
+              <span className="text-sm font-medium">Output</span>
+            </div>
+            <div className="flex-1 p-4 bg-gray-50 dark:bg-gray-800 overflow-auto min-h-0" style={{ minHeight: '400px' }}>
+              {language === 'html' && output === 'preview' ? (
+                <iframe
+                  srcDoc={code}
+                  className="w-full h-full border rounded"
+                  title="HTML Preview"
+                />
+              ) : (
+                <>
+                  {error && (
+                    <div className="bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded p-3 mb-4">
+                      <p className="text-red-700 dark:text-red-400 font-medium">Error:</p>
+                      <pre className="text-red-600 dark:text-red-300 text-sm mt-1 whitespace-pre-wrap">{error}</pre>
+                    </div>
+                  )}
+                  {output && output !== 'preview' && (
+                    <div className="bg-white dark:bg-gray-900 border rounded p-3">
+                      <p className="text-gray-700 dark:text-gray-300 font-medium mb-2">Output:</p>
+                      <pre className="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-wrap">{output}</pre>
+                    </div>
+                  )}
+                  {!output && !error && (
+                    <div className="text-gray-500 dark:text-gray-400 text-center py-8">
+                      <Play className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Click "Run" to execute your code</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
