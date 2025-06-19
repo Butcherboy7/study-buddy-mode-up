@@ -1,15 +1,14 @@
+
 import { useState, useCallback } from 'react';
-import { useGemini } from './useGemini';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
 
-export const useChat = (systemPrompt: string, apiKey?: string) => {
+export const useChat = (systemPrompt: string) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { sendMessage: sendGeminiMessage } = useGemini();
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
@@ -20,16 +19,9 @@ export const useChat = (systemPrompt: string, apiKey?: string) => {
     setIsLoading(true);
 
     try {
-      let response: string;
-      
-      if (apiKey) {
-        // Use Gemini API
-        response = await sendGeminiMessage(newMessages, systemPrompt, apiKey);
-      } else {
-        // Fallback to mock response
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-        response = generateMockResponse(content, systemPrompt);
-      }
+      // For now, use mock response - you can integrate with your backend LLM here
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      const response = generateMockResponse(content, systemPrompt);
       
       const assistantMessage: Message = { role: 'assistant', content: response };
       setMessages(prev => [...prev, assistantMessage]);
@@ -37,15 +29,13 @@ export const useChat = (systemPrompt: string, apiKey?: string) => {
       console.error('Error sending message:', error);
       const errorMessage: Message = { 
         role: 'assistant', 
-        content: apiKey 
-          ? 'Sorry, I encountered an error with the Gemini API. Please check your API key and try again.' 
-          : 'Sorry, I encountered an error. Please try again or configure your Gemini API key for better responses.'
+        content: 'Sorry, I encountered an error. Please try again.'
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  }, [messages, systemPrompt, apiKey, sendGeminiMessage]);
+  }, [messages, systemPrompt]);
 
   const clearChat = useCallback(() => {
     setMessages([]);
@@ -59,7 +49,7 @@ export const useChat = (systemPrompt: string, apiKey?: string) => {
   };
 };
 
-// Mock response generator (fallback)
+// Mock response generator - replace this with your backend API call
 const generateMockResponse = (userMessage: string, systemPrompt: string): string => {
   const lowerMessage = userMessage.toLowerCase();
   

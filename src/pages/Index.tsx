@@ -10,7 +10,6 @@ import ChatMessage from '../components/ChatMessage';
 import SmartSuggestions from '../components/SmartSuggestions';
 import CollapsibleSidebar from '../components/CollapsibleSidebar';
 import FollowUpQuestions from '../components/FollowUpQuestions';
-import ApiKeyInput from '../components/ApiKeyInput';
 import { useChat } from '../hooks/useChat';
 import { useSpeech } from '../hooks/useSpeech';
 
@@ -64,10 +63,9 @@ const Index = () => {
   const [studyMode, setStudyMode] = useState('general');
   const [message, setMessage] = useState('');
   const [showStarterPrompts, setShowStarterPrompts] = useState(true);
-  const [apiKey, setApiKey] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { messages, isLoading, sendMessage, clearChat } = useChat(STUDY_MODES[studyMode].systemPrompt, apiKey);
+  const { messages, isLoading, sendMessage, clearChat } = useChat(STUDY_MODES[studyMode].systemPrompt);
   const { startListening, stopListening, isListening, speak } = useSpeech();
 
   const scrollToBottom = () => {
@@ -202,11 +200,6 @@ const Index = () => {
 
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col">
-            {/* API Key Input */}
-            <div className="p-4 border-b">
-              <ApiKeyInput onApiKeyChange={setApiKey} />
-            </div>
-
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {showStarterPrompts && messages.length === 0 && (
