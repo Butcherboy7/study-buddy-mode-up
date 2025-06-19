@@ -6,8 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -70,17 +68,15 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onSpeak }) 
                         const match = /language-(\w+)/.exec(className || '');
                         if (match) {
                           return (
-                            <SyntaxHighlighter
-                              style={vscDarkPlus}
-                              language={match[1]}
-                              PreTag="div"
-                            >
-                              {String(children).replace(/\n$/, '')}
-                            </SyntaxHighlighter>
+                            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            </pre>
                           );
                         }
                         return (
-                          <code className={className} {...props}>
+                          <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm" {...props}>
                             {children}
                           </code>
                         );
