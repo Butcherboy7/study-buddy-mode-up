@@ -1,15 +1,18 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Moon, Sun, Trash2, Send } from 'lucide-react';
+import { Mic, Moon, Sun, Trash2, Send, Code, MessageSquare, Briefcase } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChatMessage from '../components/ChatMessage';
 import SmartSuggestions from '../components/SmartSuggestions';
 import CollapsibleSidebar from '../components/CollapsibleSidebar';
 import FollowUpQuestions from '../components/FollowUpQuestions';
+import CodeEditor from '../components/CodeEditor';
+import CareerGuidanceComponent from '../components/CareerGuidance';
 import { useChat } from '../hooks/useChat';
 import { useSpeech } from '../hooks/useSpeech';
 
@@ -63,6 +66,7 @@ const Index = () => {
   const [studyMode, setStudyMode] = useState('general');
   const [message, setMessage] = useState('');
   const [showStarterPrompts, setShowStarterPrompts] = useState(true);
+  const [activeTab, setActiveTab] = useState('chat');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { messages, isLoading, sendMessage, clearChat } = useChat(STUDY_MODES[studyMode].systemPrompt);
@@ -105,27 +109,22 @@ const Index = () => {
   };
 
   const handleOpenCareerGuidance = () => {
-    const careerWindow = window.open('/career-guidance', '_blank', 'width=1200,height=800');
+    setActiveTab('career');
+  };
+
+  const handleStartLearning = (topic: string, role: string) => {
+    setActiveTab('chat');
+    handleSendMessage(`I want to be a ${role}, for that I need to learn ${topic}. Please explain.`);
+  };
+
+  const handleAIHelp = async (code: string, language: string, question: string) => {
+    const prompt = code.trim() 
+      ? `${question}\n\nCode (${language}):\n\`\`\`${language}\n${code}\n\`\`\``
+      : question;
     
-    // Listen for messages from career guidance window
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === 'START_LEARNING') {
-        const { topic, role } = event.data.payload;
-        handleSendMessage(`I want to be a ${role}, for that I need to learn ${topic}. Please explain.`);
-      }
-    };
-    
-    window.addEventListener('message', handleMessage);
-    
-    // Clean up listener when window closes
-    if (careerWindow) {
-      const checkClosed = setInterval(() => {
-        if (careerWindow.closed) {
-          window.removeEventListener('message', handleMessage);
-          clearInterval(checkClosed);
-        }
-      }, 1000);
-    }
+    setActiveTab('chat');
+    setStudyMode('coding');
+    await handleSendMessage(prompt);
   };
 
   const getStarterPrompts = () => {
@@ -198,11 +197,195 @@ const Index = () => {
           {/* Collapsible Sidebar */}
           <CollapsibleSidebar onOpenCareerGuidance={handleOpenCareerGuidance} />
 
-          {/* Main Chat Area */}
+          {/* Main Content Area */}
           <div className="flex-1 flex flex-col">
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {showStarterPrompts && messages.length === 0 && (
+            {/* Tab Navigation */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+              <TabsList className="w-full justify-start border-b rounded-none bg-white dark:bg-gray-800 p-0">
+                <TabsTrigger value="chat" className="flex items-center gap-2 px-6 py-3">
+                  <MessageSquare className="h-4 w-4" />
+                  Chat
+                </TabsTrigger>
+                <TabsTrigger value="code" className="flex items-center gap-2 px-6 py-3">
+                  <Code className="h-4 w-4" />
+                  Code Editor
+                </TabsTrigger>
+                <TabsTrigger value="career" className="flex items-center gap-2 px-6 py-3">
+                  <Briefcase className="h-4 w-4" />
+                  Career Guide
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Chat Tab */}
+              <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {showStarterPrompts && messages.length === 0 && (
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center max-w-2xl px-4">
+                        <div className="mb-6">
+                          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span className="text-2xl font-bold text-white">EB</span>
+                          </div>
+                          <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            Welcome to EduBuddy
+                          </h2>
+                          <p className="text-lg text-gray-600 dark:text-gray-300 mb-4">
+                            AI-powered learning assistant with Gemini
+                          </p>
+                        </div>
+                        
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border mb-6">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Current mode:</p>
+                          <p className="font-medium text-blue-600 dark:text-blue-400 text-lg">
+                            {STUDY_MODES[studyMode].name}
+                          </p>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Quick start questions:</p>
+                          <div className="grid gap-3">
+                            {getStarterPrompts().map((prompt, index) => (
+                              <Button
+                                key={index}
+                                variant="outline"
+                                className="text-left justify-start h-auto p-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 shadow-sm"
+                                onClick={() => handleSendMessage(prompt)}
+                              >
+                                <span className="text-blue-600 dark:text-blue-400 mr-2">→</span>
+                                {prompt}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {messages.map((msg, index) => (
+                    <ChatMessage
+                      key={index}
+                      message={msg}
+                      onRetry={() => sendMessage(msg.content)}
+                      onSpeak={(text) => speak(text)}
+                    />
+                  ))}
+
+                  {isLoading && (
+                    <div className="flex justify-start">
+                      <Card className="max-w-xs">
+                        <CardContent className="p-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex space-x-1">
+                              <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+                              <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                              <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            </div>
+                            <span className="text-sm text-gray-500">Thinking...</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Smart Suggestions */}
+                {messages.length > 0 && (
+                  <SmartSuggestions
+                    suggestions={STUDY_MODES[studyMode].suggestions}
+                    lastMessage={messages[messages.length - 1]}
+                    onSuggestionClick={handleSendMessage}
+                  />
+                )}
+
+                {/* Input Area */}
+                <div className="border-t bg-white dark:bg-gray-800 p-4">
+                  <div className="flex gap-2 max-w-4xl mx-auto">
+                    <div className="flex-1 relative">
+                      <Input
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder={STUDY_MODES[studyMode].placeholder}
+                        onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                        disabled={isLoading}
+                        className="pr-20"
+                      />
+                      <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex gap-1">
+                        <FollowUpQuestions
+                          lastMessage={messages[messages.length - 1] || null}
+                          studyMode={studyMode}
+                          onQuestionClick={handleSendMessage}
+                        />
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={`h-8 w-8 ${isListening ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : ''}`}
+                              onClick={handleVoiceInput}
+                              disabled={isLoading}
+                            >
+                              <Mic className={`h-4 w-4 ${isListening ? 'animate-pulse' : ''}`} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {isListening ? 'Stop listening' : 'Voice input'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => handleSendMessage()} 
+                      disabled={!message.trim() || isLoading}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {/* Status indicator */}
+                  {isLoading && (
+                    <div className="mt-2 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.15s'}}></div>
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.3s'}}></div>
+                        </div>
+                        <span>Generating response with Gemini...</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Code Editor Tab */}
+              <TabsContent value="code" className="flex-1 mt-0">
+                <CodeEditor onAIHelp={handleAIHelp} />
+              </TabsContent>
+
+              {/* Career Guidance Tab */}
+              <TabsContent value="career" className="flex-1 mt-0">
+                <div className="h-full bg-gray-50 dark:bg-gray-900">
+                  <div className="h-full overflow-auto">
+                    <CareerGuidanceComponent onStartLearning={handleStartLearning} />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+};
+
+export default Index;
                 <div className="flex-1 flex items-center justify-center">
                   <div className="text-center max-w-2xl px-4">
                     <div className="mb-6">
