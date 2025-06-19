@@ -263,39 +263,43 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ onAIHelp }) => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={runCode} disabled={isRunning} className="bg-green-600 hover:bg-green-700">
-            <Play className="h-4 w-4 mr-2" />
-            {isRunning ? 'Running...' : 'Run'}
+        <div className="flex flex-wrap gap-1 sm:gap-2">
+          <Button onClick={runCode} disabled={isRunning} className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm">
+            <Play className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">{isRunning ? 'Running...' : 'Run'}</span>
+            <span className="sm:hidden">Run</span>
           </Button>
           
-          <Button onClick={generateCode} variant="outline">
-            <Sparkles className="h-4 w-4 mr-2" />
-            Generate Example
+          <Button onClick={generateCode} variant="outline" className="text-xs sm:text-sm">
+            <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Generate Example</span>
+            <span className="sm:hidden">Gen</span>
           </Button>
           
-          <Button onClick={debugCode} variant="outline">
-            <Bug className="h-4 w-4 mr-2" />
-            Debug
+          <Button onClick={debugCode} variant="outline" className="text-xs sm:text-sm">
+            <Bug className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Debug</span>
+            <span className="sm:hidden">Fix</span>
           </Button>
           
-          <Button onClick={copyCode} variant="outline" size="sm">
-            <Copy className="h-4 w-4 mr-2" />
-            Copy
+          <Button onClick={copyCode} variant="outline" size="sm" className="text-xs">
+            <Copy className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            <span className="hidden sm:inline">Copy</span>
           </Button>
           
-          <Button onClick={downloadCode} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Download
+          <Button onClick={downloadCode} variant="outline" size="sm" className="text-xs">
+            <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            <span className="hidden sm:inline">Download</span>
           </Button>
           
           <Button 
             onClick={() => setCode(LANGUAGES[language].template)} 
             variant="outline" 
             size="sm"
+            className="text-xs"
           >
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Reset
+            <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            <span className="hidden sm:inline">Reset</span>
           </Button>
         </div>
       </div>
@@ -375,13 +379,21 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ onAIHelp }) => {
       </div>
 
       {/* AI Help Section */}
-      <div className="border-t bg-white dark:bg-gray-800 p-4">
+      <div className="border-t bg-white dark:bg-gray-800 p-4 flex-shrink-0">
         <div className="flex gap-2">
           <Textarea
             value={aiQuestion}
             onChange={(e) => setAiQuestion(e.target.value)}
             placeholder="Ask AI about your code: 'How can I optimize this?' or 'Explain this function'"
             className="flex-1 min-h-[60px] max-h-[120px]"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (aiQuestion.trim()) {
+                  askAI();
+                }
+              }
+            }}
           />
           <Button onClick={askAI} disabled={!aiQuestion.trim()} className="bg-blue-600 hover:bg-blue-700">
             <Sparkles className="h-4 w-4 mr-2" />

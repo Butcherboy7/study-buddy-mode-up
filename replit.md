@@ -105,8 +105,13 @@ EduBuddy is a modern AI-powered learning assistant application built with React 
 ✓ Redesigned layout with collapsible left sidebar for navigation
 ✓ Added mouse-draggable resize functionality to code playground
 ✓ Moved navigation buttons to sidebar to prevent scrolling issues
-✓ Improved user experience with persistent panel sizing
+✓ Implemented proper dark mode with CSS variables and localStorage persistence
+✓ Made layout fully responsive for mobile devices with overlay sidebar
+✓ Fixed chat window to be fixed height with proper scrolling
+✓ Added Enter key functionality in code editor AI help section
+✓ Improved mobile button sizing and text responsiveness
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
-Layout preferences: Left sidebar navigation, resizable code editor panels
+Layout preferences: Left sidebar navigation, resizable code editor panels, fixed chat window with scroll, responsive mobile design
+UI preferences: Working dark mode, mobile-responsive layout, Enter key shortcuts

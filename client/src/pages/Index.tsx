@@ -54,7 +54,13 @@ const STUDY_MODES = {
 };
 
 const Index = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('darkMode') === 'true' || 
+             window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
   const [activeTab, setActiveTab] = useState('chat');
   const [showStarterPrompts, setShowStarterPrompts] = useState(true);
   const [studyMode, setStudyMode] = useState<keyof typeof STUDY_MODES>('coding');
@@ -72,6 +78,17 @@ const Index = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    // Apply dark mode to document
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    // Save to localStorage
+    localStorage.setItem('darkMode', isDarkMode.toString());
+  }, [isDarkMode]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -150,9 +167,9 @@ const Index = () => {
   };
 
   const renderChatContent = () => (
-    <div className="flex-1 flex flex-col">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="h-full flex flex-col">
+      {/* Messages - Fixed height with scroll */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: 'calc(100vh - 200px)' }}>
         {showStarterPrompts && messages.length === 0 && (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center max-w-2xl px-4">
@@ -177,16 +194,16 @@ const Index = () => {
               
               <div className="space-y-3">
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Quick start questions:</p>
-                <div className="grid gap-3">
+                <div className="grid gap-2 sm:gap-3">
                   {getStarterPrompts().map((prompt, index) => (
                     <Button
                       key={index}
                       variant="outline"
-                      className="text-left justify-start h-auto p-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 shadow-sm"
+                      className="text-left justify-start h-auto p-3 sm:p-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 shadow-sm text-sm sm:text-base"
                       onClick={() => handleSendMessage(prompt)}
                     >
                       <span className="text-blue-600 dark:text-blue-400 mr-2">→</span>
-                      {prompt}
+                      <span className="break-words">{prompt}</span>
                     </Button>
                   ))}
                 </div>
@@ -223,24 +240,31 @@ const Index = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Smart Suggestions */}
-      {messages.length > 0 && (
-        <SmartSuggestions
-          suggestions={STUDY_MODES[studyMode].suggestions}
-          lastMessage={messages[messages.length - 1]}
-          onSuggestionClick={handleSendMessage}
-        />
-      )}
+      {/* Smart Suggestions - Fixed position */}
+      <div className="border-t bg-gray-50 dark:bg-gray-900">
+        {messages.length > 0 && (
+          <SmartSuggestions
+            suggestions={STUDY_MODES[studyMode].suggestions}
+            lastMessage={messages[messages.length - 1]}
+            onSuggestionClick={handleSendMessage}
+          />
+        )}
+      </div>
 
-      {/* Input Area */}
-      <div className="border-t bg-white dark:bg-gray-800 p-4">
-        <div className="flex gap-2 max-w-4xl mx-auto">
+      {/* Input Area - Fixed at bottom */}
+      <div className="border-t bg-white dark:bg-gray-800 p-4 flex-shrink-0">
+        <div className="flex gap-2 w-full">
           <div className="flex-1 relative">
             <Input
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder={STUDY_MODES[studyMode].placeholder}
-              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
               disabled={isLoading}
               className="pr-20"
             />
@@ -301,8 +325,16 @@ const Index = () => {
   return (
     <TooltipProvider>
       <div className="h-screen flex bg-gray-50 dark:bg-gray-900">
+        {/* Mobile Overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Left Sidebar */}
-        <div className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white dark:bg-gray-800 border-r transition-all duration-300 flex flex-col`}>
+        <div className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white dark:bg-gray-800 border-r transition-all duration-300 flex flex-col fixed lg:relative h-full z-50 lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} lg:translate-x-0`}>
           {/* Sidebar Header */}
           <div className="p-4 border-b">
             <div className="flex items-center gap-2">
@@ -392,11 +424,20 @@ const Index = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col w-full lg:w-auto">
           {/* Header */}
           <div className="bg-white dark:bg-gray-800 border-b px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            {/* Mobile menu button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden h-8 w-8 mr-2"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <h1 className="text-lg lg:text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent truncate">
                 {activeTab === 'chat' && 'AI Chat Assistant'}
                 {activeTab === 'code' && 'Code Playground'}
                 {activeTab === 'career' && 'Career Guidance'}
@@ -404,7 +445,7 @@ const Index = () => {
               
               {!sidebarOpen && (
                 <Select value={studyMode} onValueChange={(value: keyof typeof STUDY_MODES) => setStudyMode(value)}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-32 lg:w-40">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -449,16 +490,14 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Main Content Area with Resizable Panels */}
-          <div className="flex-1">
+          {/* Main Content Area */}
+          <div className="flex-1 overflow-hidden">
             {activeTab === 'chat' && renderChatContent()}
             
             {activeTab === 'code' && (
-              <ResizablePanelGroup direction="horizontal" className="h-full">
-                <ResizablePanel defaultSize={100} minSize={50}>
-                  <CodeEditor onAIHelp={handleAIHelp} />
-                </ResizablePanel>
-              </ResizablePanelGroup>
+              <div className="h-full">
+                <CodeEditor onAIHelp={handleAIHelp} />
+              </div>
             )}
 
             {activeTab === 'career' && (
