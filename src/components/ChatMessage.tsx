@@ -66,20 +66,21 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onSpeak }) 
                 <div className="prose prose-sm max-w-none dark:prose-invert">
                   <ReactMarkdown
                     components={{
-                      code(props) {
-                        const { children, className, ...rest } = props;
+                      code: ({ children, className, ...props }) => {
                         const match = /language-(\w+)/.exec(className || '');
-                        return match ? (
-                          <SyntaxHighlighter
-                            style={vscDarkPlus as any}
-                            language={match[1]}
-                            PreTag="div"
-                            {...rest}
-                          >
-                            {String(children).replace(/\n$/, '')}
-                          </SyntaxHighlighter>
-                        ) : (
-                          <code className={className} {...rest}>
+                        if (match) {
+                          return (
+                            <SyntaxHighlighter
+                              style={vscDarkPlus}
+                              language={match[1]}
+                              PreTag="div"
+                            >
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
+                          );
+                        }
+                        return (
+                          <code className={className} {...props}>
                             {children}
                           </code>
                         );
